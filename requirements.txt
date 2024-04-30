@@ -1,0 +1,6 @@
+python-opencv
+python-dotenv
+fastapi
+uvicorn
+openai
+numpy

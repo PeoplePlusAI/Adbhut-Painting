@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture</title>
+</head>
+<body>
+    <h1>Camera Capture</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    
+    <script>
+        // Global variable to track whether audio is playing
+        let is_audio_playing = false;
+
+        const video = document.getElementById('video');
+        const apiUrl = 'http://localhost:8000/respond_voice/';
+
+        // Function to capture frames from the camera and send them to the server
+        async function captureFrameAndSend() {
+            // Check if audio is playing
+            if (is_audio_playing) {
+                // Wait for audio to finish before sending another request
+                setTimeout(captureFrameAndSend, 1000); // Retry after 1 second
+                return;
+            }
+
+            // Capture frame from the camera
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            // Convert data URI to Blob
+            const blob = await (await fetch(imageData)).blob();
+
+            // Create FormData object and append the file
+            const formData = new FormData();
+            formData.append('file', blob, 'frame.jpg'); // Use the same field name as expected by the backend
+
+            // Send frame to server for processing
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    console.error('Failed to capture frame:', response.status);
+                } else {
+                    const responseData = await response.json();
+                    console.log(responseData);
+
+                    // Check if audio data is present in the response
+                    if (responseData.audio) {
+                        // Convert base64 audio data to a Blob
+                        const audioBlob = base64toBlob(responseData.audio, 'audio/wav');
+
+                        // Create a URL for the audio Blob
+                        const audioUrl = URL.createObjectURL(audioBlob);
+
+                        // Create an audio element
+                        const audio = new Audio(audioUrl);
+
+                        // Add an event listener to detect when the audio playback ends
+                        audio.addEventListener('ended', () => {
+                            // Set is_audio_playing to false when audio playback ends
+                            is_audio_playing = false;
+                        });
+
+                        // Play the audio
+                        audio.play();
+
+                        // Set is_audio_playing to true when audio starts playing
+                        is_audio_playing = true;
+                    }
+                }
+            } catch (error) {
+                console.error('Error capturing frame:', error);
+            }
+
+            // Call the function recursively to capture frames continuously
+            requestAnimationFrame(captureFrameAndSend);
+        }
+
+        // Get access to the camera stream
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                // Start capturing frames continuously
+                captureFrameAndSend();
+            })
+            .catch(error => console.error('Error accessing camera:', error));
+
+        // Function to convert base64 data to a Blob
+        function base64toBlob(base64Data, contentType) {
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: contentType });
+        }
+    </script>
+</body>
+</html>
