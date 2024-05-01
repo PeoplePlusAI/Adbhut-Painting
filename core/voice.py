@@ -32,7 +32,7 @@ def dubverse_tts(text, speaker_no=9, api_key=DUBVERSE_API_KEY):
     try:
         response = requests.post(base_url + endpoint, headers=headers, json=payload)
         if response.status_code == 200:
-            return response.content
+            return response
         else:
             print("Error:", response.text)
             return None
@@ -52,6 +52,7 @@ def text_to_speech(text):
     return response
 
 
-def play_wav(audio_content):
+def play_wav(audio):
+    audio_content = audio.content
     audio = AudioSegment.from_file(io.BytesIO(audio_content), format="wav")
     play(audio)

@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from core.voice import text_to_speech
+from core.voice import text_to_speech, dubverse_tts
 import base64
 import tempfile
 import requests
@@ -38,7 +38,7 @@ def respond(encoded_img):
 def respond_voice(encoded_img):
     response_text = respond(encoded_img)
     if response_text:
-        audio_response = text_to_speech(response_text)
+        audio_response = dubverse_tts(response_text)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
             audio_response.stream_to_file(f.name)
             audio_response = f.read()
