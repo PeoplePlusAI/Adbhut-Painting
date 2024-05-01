@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 
-net = cv2.dnn.readNet("coco-model/yolov3.weights", "coco-model/yolov3.cfg")
+net = cv2.dnn.readNet("coco_model/yolov3.weights", "coco_model/yolov3.cfg")
 classes = []
-with open("coco-model/coco.names", "r") as f:
+with open("coco_model/coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
 
 layer_names = net.getLayerNames()

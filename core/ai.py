@@ -29,6 +29,9 @@ def respond(encoded_img):
     response = requests.post(LLAVA_URL, json=body)
     end = time.time()
     print(end - start)
+    if response.status_code != 200:
+        print("Something went wrong")
+        return ""
     print(response.json())
     return response.json().get("response", "").replace("</s>", "").strip()
 
