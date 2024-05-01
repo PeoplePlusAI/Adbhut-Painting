@@ -50,4 +50,8 @@ def text_to_speech(text):
         input=text
     )
     return response
-    
+
+
+def play_wav(audio_content):
+    audio = AudioSegment.from_file(io.BytesIO(audio_content), format="wav")
+    play(audio)
