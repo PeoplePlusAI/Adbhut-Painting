@@ -1,12 +1,10 @@
 from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
-from core.face_detection import detect_people_yolo
-from utils.file import convert_to_base64
-from core.ai import respond, respond_voice
+from fastapi.responses import HTMLResponse
+from core.ai import respond_voice
 
-
+from core.models import VoiceResponseModel
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
@@ -19,31 +17,12 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-
-@app.post("/respond/")
-async def detect(file: UploadFile = File(...)):
-    contents = await file.read()
-    person_detected = detect_people_yolo(contents)
-
-    if person_detected:
-        encoded_img = convert_to_base64(contents)
-        return JSONResponse(content={"response": respond(encoded_img)})
-    else:
-        return JSONResponse(content={})
-
     
 @app.post("/respond_voice/")
-async def detect(file: UploadFile = File(...)):
+async def detect(file: UploadFile = File(...)) -> VoiceResponseModel:
     contents = await file.read()
-    person_detected = detect_people_yolo(contents)
-
-    if person_detected:
-        encoded_img = convert_to_base64(contents)
-        response = respond_voice(encoded_img)
-
-        return JSONResponse(content=response)
-    else:
-        return JSONResponse(content={})
+    response = respond_voice(contents)
+    return response
 
 
 @app.get("/", response_class=HTMLResponse)

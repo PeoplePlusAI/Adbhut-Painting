@@ -1,7 +1,9 @@
 from dotenv import load_dotenv
+from utils.file import convert_to_base64
+from core.face_detection import detect_people_yolo
 from core.voice import text_to_speech, dubverse_tts
 import base64
-import tempfile
+import random
 import requests
 import time
 import os
@@ -23,7 +25,7 @@ def compose_body(encoded_img, prompt=prompt, model="llava"):
     }
 
 
-def respond(encoded_img):
+def llava_chat(encoded_img):
     body = compose_body(encoded_img)
     start = time.time()
     response = requests.post(LLAVA_URL, json=body)
@@ -33,13 +35,21 @@ def respond(encoded_img):
         print("Something went wrong")
         return ""
     print(response.json())
-    return response.json().get("response", "").replace("</s>", "").strip()
+    response = response.json().get("response", "").replace("</s>", "").strip()
+    return response
 
-def respond_voice(encoded_img):
-    response_text = respond(encoded_img)
+
+def respond_voice(contents, person_detected=False):
+    person_detected = detect_people_yolo(contents)
+    if person_detected:
+        encoded_img = convert_to_base64(contents)
+        response_text = llava_chat(encoded_img)
+    else:
+        response_text = ""
     if response_text:
         audio_response = dubverse_tts(response_text)
         encoded_audio = base64.b64encode(audio_response.content).decode("utf-8")
-        return {"response": response_text, "audio": encoded_audio}
+        return {"response": response_text, "audio": encoded_audio, "expression": "talking"}
     else:
-        return {}
+        expression = random.choice(["deadface", "surprised", "idle"])
+        return {"response": "", "audio": "", "expression": expression}
