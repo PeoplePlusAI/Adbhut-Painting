@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 4. Run the following commands to get the yolov3 weights
 ```bash
-wget https://pjreddie.com/media/files/yolov3.weights -o coco_model/yolov3.weights
+wget https://pjreddie.com/media/files/yolov3.weights -O coco_model/yolov3.weights
 ```
 
 5. Run the web server
