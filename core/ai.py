@@ -32,7 +32,7 @@ def llava_chat(encoded_img):
     end = time.time()
     print(end - start)
     if response.status_code != 200:
-        print("Something went wrong")
+        print(f"Something went wrong. Status code is {response.status_code}")
         return ""
     print(response.json())
     response = response.json().get("response", "").replace("</s>", "").strip()
