@@ -40,10 +40,11 @@
 <video id="video" width="640" height="480" autoplay style="display:none;"></video>
 
 <script>
-    const STATIC_FILE_URL = 'http://127.0.0.1:8000/static';
+    const STATIC_FILE_URL = '{{ static_file_url }}';
+
     let isAudioPlaying = false;
     const video = document.getElementById('video');
-    const apiUrl = 'http://localhost:8000/respond_voice/';
+    const apiUrl = '{{ api_url }}';
     const container = document.querySelector('.container');
 
     // expressions
