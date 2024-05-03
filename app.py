@@ -1,9 +1,13 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+import os
 from core.ai import respond_voice
+
+load_dotenv(dotenv_path="ops/.env")
 
 from core.models import VoiceResponseModel
 app = FastAPI()
@@ -31,7 +35,9 @@ async def detect(file: UploadFile = File(...)) -> VoiceResponseModel:
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the index.html file."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    STATIC_FILE_URL = os.getenv("STATIC_FILE_URL", "http://127.0.0.1:8000/static") 
+    API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/respond_voice/")
+    return templates.TemplateResponse("index.html", {"request": request,"static_file_url": STATIC_FILE_URL, "api_url": API_URL})
 
 if __name__ == "__main__":
     import uvicorn

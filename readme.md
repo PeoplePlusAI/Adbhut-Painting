@@ -14,6 +14,8 @@ The plan is to put a tablet behind the painting and have it talks when it detect
 ```bash
 OPENAI_API_KEY=your_openai_api_key
 LLAVA_URL=ollama_url
+STATIC_FILE_URL=http://127.0.0.1:8000/static
+API_URL=http://127.0.0.1:8000/respond_voice
 ```
 
 3. Install the dependencies
