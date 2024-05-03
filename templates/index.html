@@ -33,7 +33,7 @@
     </style>
 </head>
 <body>
-<div class="container">
+<div class="container" onclick="requestFullscreen()">
     <!-- Placeholder for dynamic video elements -->
 </div>
 
@@ -144,6 +144,19 @@
         }
         const byteArray = new Uint8Array(byteNumbers);
         return new Blob([byteArray], { type: contentType });
+    }
+
+    function requestFullscreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.mozRequestFullScreen) { /* Firefox */
+            elem.mozRequestFullScreen();
+        } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { /* IE/Edge */
+            elem.msRequestFullscreen();
+        }
     }
 </script>
 </body>
