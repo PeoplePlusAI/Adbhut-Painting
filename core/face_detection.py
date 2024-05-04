@@ -62,6 +62,7 @@ def detect_people_yolo(image_bytes):
     redis_client.set("previous_count", current_count)
 
     # Check if a new person has been detected
+    print(f"Previous count: {previous_count}, Current count: {current_count}")
     if current_count > previous_count:
         return True  # New person detected
     else:
