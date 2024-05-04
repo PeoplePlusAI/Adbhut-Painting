@@ -43,8 +43,6 @@
     const STATIC_FILE_URL = '{{ static_file_url }}';
 
     let isAudioPlaying = false;
-    let isSwitchingVideo = false;
-    let idleTimeout; // Timeout for transitioning from idle to talking
     const video = document.getElementById('video');
     const apiUrl = '{{ api_url }}';
     const container = document.querySelector('.container');
@@ -62,15 +60,11 @@
         videoElement.autoplay = true;
         videoElement.loop = true;
 
-        if (expression === 'blinking_eye_left' || expression === 'blinking_eye_right') {
-            videoElement.playbackRate = 0.6; // Adjusting playback rate for blinking animations
-        }
-
         container.appendChild(videoElement);
     });
 
     async function captureFrameAndSend() {
-        if (isAudioPlaying || isSwitchingVideo) {
+        if (isAudioPlaying) {
             setTimeout(captureFrameAndSend, 1000);
             return;
         }
@@ -115,7 +109,6 @@
         const audio = new Audio(audioUrl);
         audio.addEventListener('ended', () => {
             isAudioPlaying = false;
-            switchVideo(randomIdleExpression()); // Switch back to idle state after audio ends
         });
         audio.play();
         isAudioPlaying = true;
@@ -125,9 +118,6 @@
     }
 
     function switchVideo(expression) {
-        if (isSwitchingVideo) return;
-        isSwitchingVideo = true;
-
         document.querySelectorAll('.video').forEach(video => {
             video.classList.remove('active');
         });
@@ -135,23 +125,6 @@
         if (activeVideo) {
             activeVideo.classList.add('active');
         }
-
-        // Clear previous idle timeout
-        clearTimeout(idleTimeout);
-
-        if (expression === 'idle') {
-            // Set timeout to switch from idle to talking after 5 seconds
-            idleTimeout = setTimeout(() => {
-                switchVideo('talking');
-            }, 5000);
-        } else {
-            // Reset idle timeout for other expressions
-            idleTimeout = null;
-        }
-
-        setTimeout(() => {
-            isSwitchingVideo = false;
-        }, 1000); // Delay to prevent rapid switching
     }
 
     function randomIdleExpression() {
