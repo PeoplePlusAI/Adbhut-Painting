@@ -12,10 +12,12 @@ The plan is to put a tablet behind the painting and have it talks when it detect
 1. Clone the repo
 2. Create a `ops/.env` file and add the following variables
 ```bash
-OPENAI_API_KEY=your_openai_api_key
-LLAVA_URL=ollama_url
-STATIC_FILE_URL=http://127.0.0.1:8000/static
-API_URL=http://127.0.0.1:8000/respond_voice
+OPENAI_API_KEY=<openai-api-key>
+DUBVERSE_API_KEY=<dub-verse-api-key>
+DUBVERSE_URL=https://macaque.dubverse.ai/api/merlin/services/tts/text-to-speech
+LLAVA_URL=https://localhost:11434/api/generate
+STATIC_FILE_URL=http://localhost:8000/static
+API_URL=http://localhost:8000/respond_voice/
 ```
 
 3. Install the dependencies
