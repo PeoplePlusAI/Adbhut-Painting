@@ -1,3 +1,4 @@
+import os
 import cv2
 import time
 import redis
@@ -5,10 +6,30 @@ import numpy as np
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
-net = cv2.dnn.readNet("coco_model/yolov3.weights", "coco_model/yolov3.cfg")
+if os.path.exists("coco_model/yolov3.weights"):
+    weights_path = "coco_model/yolov3.weights"
+    config_path = "coco_model/yolov3.cfg"
+    names_path = "coco_model/coco.names"
+else:
+    # Full path to the directory containing the YOLO model files
+    MODEL_DIR = os.path.join(os.path.expanduser('~'), 'ai-painting', 'coco_model')
+
+    # Absolute paths to the YOLOv3 weights, config, and coco.names file
+    weights_path = os.path.join(MODEL_DIR, 'yolov3.weights')
+    config_path = os.path.join(MODEL_DIR, 'yolov3.cfg')
+    names_path = os.path.join(MODEL_DIR, 'coco.names')
+
+# Load YOLOv3 model
+net = cv2.dnn.readNet(weights_path, config_path)
+
+#net = cv2.dnn.readNet("coco_model/yolov3.weights", "coco_model/yolov3.cfg")
 classes = []
-with open("coco_model/coco.names", "r") as f:
+
+with open(names_path, "r") as f:
     classes = [line.strip() for line in f.readlines()]
+
+#with open("coco_model/coco.names", "r") as f:
+#    classes = [line.strip() for line in f.readlines()]
 
 layer_names = net.getLayerNames()
 output_layers_indices = net.getUnconnectedOutLayers()
