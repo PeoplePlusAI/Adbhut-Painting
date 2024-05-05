@@ -41,6 +41,7 @@
 
 <script>
     const STATIC_FILE_URL = '{{ static_file_url }}';
+    let blinkCounter = 0; 
 
     let isAudioPlaying = false;
     let isSwitchingVideo = false;
@@ -50,8 +51,8 @@
     const container = document.querySelector('.container');
 
     // expressions
-    const expressions = ['talking','idle','surprised','blinking_eye_left','blinking_eye_right']; 
-    const idleExpressions = ['idle','blinking_eye_left','blinking_eye_right'];
+    const expressions = ['talking','idle','surprised','blinking_eye_left','blinking_eye_right','surprised','heart']; 
+    const idleExpressions = ['idle','blinking_eye_left','blinking_eye_right','surprised','heart'];
 
     // Preload all videos for different expressions
     expressions.forEach(expression => {
@@ -98,7 +99,7 @@
                     handleAudio(responseData.audio);
                 } else {
                     // Handle random state
-                    switchVideo(randomIdleExpression());
+                    switchToIdleExpression();
                 }
             } else {
                 console.error('Failed to capture frame:', response.status);
@@ -158,6 +159,20 @@
         return idleExpressions[Math.floor(Math.random() * idleExpressions.length)];
     }
 
+    function switchToIdleExpression() {
+        blinkCounter++;
+        let nextExpression;
+
+        if (blinkCounter % 3 === 0) {
+            nextExpression = blinkingExpressions[Math.floor(Math.random() * blinkingExpressions.length)];
+        } else {
+            nextExpression = idleExpressions[Math.floor(Math.random() * idleExpressions.length)];
+        }
+
+        switchVideo(nextExpression);
+    }
+
+    
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
             video.srcObject = stream;
