@@ -1,10 +1,7 @@
 import openai
 import requests
-import sounddevice as sd
-import soundfile as sf
 from pydub import AudioSegment
 from pydub.playback import play
-import base64
 from dotenv import load_dotenv
 import os
 import io

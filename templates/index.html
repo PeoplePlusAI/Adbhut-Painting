@@ -4,105 +4,189 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Capture</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+        }
+        .video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none; 
+        }
+        .video.active {
+            display: block; 
+        }
+    </style>
 </head>
 <body>
-    <h1>Camera Capture</h1>
-    <video id="video" width="640" height="480" autoplay></video>
-    
-    <script>
-        // Global variable to track whether audio is playing
-        let is_audio_playing = false;
+<div class="container" onclick="requestFullscreen()">
+    <!-- Placeholder for dynamic video elements -->
+</div>
 
-        const video = document.getElementById('video');
-        const apiUrl = 'http://localhost:8000/respond_voice/';
+<video id="video" width="640" height="480" autoplay style="display:none;"></video>
 
-        // Function to capture frames from the camera and send them to the server
-        async function captureFrameAndSend() {
-            // Check if audio is playing
-            if (is_audio_playing) {
-                // Wait for audio to finish before sending another request
-                setTimeout(captureFrameAndSend, 1000); // Retry after 1 second
-                return;
-            }
+<script>
+    const STATIC_FILE_URL = '{{ static_file_url }}';
 
-            // Capture frame from the camera
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg');
+    let isAudioPlaying = false;
+    let isSwitchingVideo = false;
+    let idleTimeout; // Timeout for transitioning from idle to talking
+    const video = document.getElementById('video');
+    const apiUrl = '{{ api_url }}';
+    const container = document.querySelector('.container');
 
-            // Convert data URI to Blob
-            const blob = await (await fetch(imageData)).blob();
+    // expressions
+    const expressions = ['talking','idle','surprised','blinking_eye_left','blinking_eye_right']; 
+    const idleExpressions = ['idle','blinking_eye_left','blinking_eye_right'];
 
-            // Create FormData object and append the file
-            const formData = new FormData();
-            formData.append('file', blob, 'frame.jpg'); // Use the same field name as expected by the backend
+    // Preload all videos for different expressions
+    expressions.forEach(expression => {
+        const videoElement = document.createElement('video');
+        videoElement.src = `${STATIC_FILE_URL}/video_${expression}.mp4`;
+        videoElement.classList.add('video');
+        if (expression === 'idle') videoElement.classList.add('active'); // Default active video
+        videoElement.autoplay = true;
+        videoElement.loop = true;
 
-            // Send frame to server for processing
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (!response.ok) {
-                    console.error('Failed to capture frame:', response.status);
+        if (expression === 'blinking_eye_left' || expression === 'blinking_eye_right') {
+            videoElement.playbackRate = 0.6; // Adjusting playback rate for blinking animations
+        }
+
+        container.appendChild(videoElement);
+    });
+
+    async function captureFrameAndSend() {
+        if (isAudioPlaying || isSwitchingVideo) {
+            setTimeout(captureFrameAndSend, 1000);
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/jpeg');
+        const blob = await (await fetch(imageData)).blob();
+        const formData = new FormData();
+        formData.append('file', blob, 'frame.jpg');
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const responseData = await response.json();
+                console.log(responseData);
+                if (responseData.audio) {
+                    handleAudio(responseData.audio);
                 } else {
-                    const responseData = await response.json();
-                    console.log(responseData);
-
-                    // Check if audio data is present in the response
-                    if (responseData.audio) {
-                        // Convert base64 audio data to a Blob
-                        const audioBlob = base64toBlob(responseData.audio, 'audio/wav');
-
-                        // Create a URL for the audio Blob
-                        const audioUrl = URL.createObjectURL(audioBlob);
-
-                        // Create an audio element
-                        const audio = new Audio(audioUrl);
-
-                        // Add an event listener to detect when the audio playback ends
-                        audio.addEventListener('ended', () => {
-                            // Set is_audio_playing to false when audio playback ends
-                            is_audio_playing = false;
-                        });
-
-                        // Play the audio
-                        audio.play();
-
-                        // Set is_audio_playing to true when audio starts playing
-                        is_audio_playing = true;
-                    }
+                    // Handle random state
+                    switchVideo(randomIdleExpression());
                 }
-            } catch (error) {
-                console.error('Error capturing frame:', error);
+            } else {
+                console.error('Failed to capture frame:', response.status);
             }
+        } catch (error) {
+            console.error('Error capturing frame:', error);
+        }
+        requestAnimationFrame(captureFrameAndSend);
+    }
 
-            // Call the function recursively to capture frames continuously
-            requestAnimationFrame(captureFrameAndSend);
+    function handleAudio(audioBase64) {
+        const audioBlob = base64toBlob(audioBase64, 'audio/wav');
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.addEventListener('ended', () => {
+            isAudioPlaying = false;
+            switchVideo(randomIdleExpression()); // Switch back to idle state after audio ends
+        });
+        audio.play();
+        isAudioPlaying = true;
+
+        // Switch to 'talking' expression video when audio starts playing
+        switchVideo('talking');
+    }
+
+    function switchVideo(expression) {
+        if (isSwitchingVideo) return;
+        isSwitchingVideo = true;
+
+        document.querySelectorAll('.video').forEach(video => {
+            video.classList.remove('active');
+        });
+        const activeVideo = document.querySelector(`.video[src*="${expression}"]`);
+        if (activeVideo) {
+            activeVideo.classList.add('active');
         }
 
-        // Get access to the camera stream
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-                // Start capturing frames continuously
-                captureFrameAndSend();
-            })
-            .catch(error => console.error('Error accessing camera:', error));
+        // Clear previous idle timeout
+        clearTimeout(idleTimeout);
 
-        // Function to convert base64 data to a Blob
-        function base64toBlob(base64Data, contentType) {
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            return new Blob([byteArray], { type: contentType });
+        if (expression === 'idle') {
+            // Set timeout to switch from idle to talking after 5 seconds
+            idleTimeout = setTimeout(() => {
+                switchVideo('talking');
+            }, 5000);
+        } else {
+            // Reset idle timeout for other expressions
+            idleTimeout = null;
         }
-    </script>
+
+        setTimeout(() => {
+            isSwitchingVideo = false;
+        }, 1000); // Delay to prevent rapid switching
+    }
+
+    function randomIdleExpression() {
+        return idleExpressions[Math.floor(Math.random() * idleExpressions.length)];
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+            captureFrameAndSend();
+        })
+        .catch(error => console.error('Error accessing camera:', error));
+
+    function base64toBlob(base64Data, contentType) {
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type: contentType });
+    }
+
+    function requestFullscreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.mozRequestFullScreen) { /* Firefox */
+            elem.mozRequestFullScreen();
+        } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { /* IE/Edge */
+            elem.msRequestFullscreen();
+        }
+    }
+</script>
 </body>
 </html>

@@ -1,10 +1,35 @@
+import os
 import cv2
+import time
+import redis
 import numpy as np
 
-net = cv2.dnn.readNet("coco_model/yolov3.weights", "coco_model/yolov3.cfg")
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
+if os.path.exists("coco_model/yolov3.weights"):
+    weights_path = "coco_model/yolov3.weights"
+    config_path = "coco_model/yolov3.cfg"
+    names_path = "coco_model/coco.names"
+else:
+    # Full path to the directory containing the YOLO model files
+    MODEL_DIR = os.path.join(os.path.expanduser('~'), 'ai-painting', 'coco_model')
+
+    # Absolute paths to the YOLOv3 weights, config, and coco.names file
+    weights_path = os.path.join(MODEL_DIR, 'yolov3.weights')
+    config_path = os.path.join(MODEL_DIR, 'yolov3.cfg')
+    names_path = os.path.join(MODEL_DIR, 'coco.names')
+
+# Load YOLOv3 model
+net = cv2.dnn.readNet(weights_path, config_path)
+
+#net = cv2.dnn.readNet("coco_model/yolov3.weights", "coco_model/yolov3.cfg")
 classes = []
-with open("coco_model/coco.names", "r") as f:
+
+with open(names_path, "r") as f:
     classes = [line.strip() for line in f.readlines()]
+
+#with open("coco_model/coco.names", "r") as f:
+#    classes = [line.strip() for line in f.readlines()]
 
 layer_names = net.getLayerNames()
 output_layers_indices = net.getUnconnectedOutLayers()
@@ -14,7 +39,16 @@ if output_layers_indices.ndim > 1:  # Checking if the output is a nested list
 else:
     output_layers = [layer_names[i - 1] for i in output_layers_indices.flatten()]
 
+# Initialize time of last detection and debounce period
+last_detection_time = 0
+debounce_period = 100  # Adjust the debounce period as needed (in seconds)
+
 def detect_people_yolo(image_bytes):
+    global redis_client
+
+    # Retrieve previous count from Redis
+    previous_count = int(redis_client.get("previous_count") or 0)
+
     # Convert bytes to a numpy array
     nparr = np.frombuffer(image_bytes, np.uint8)
 
@@ -25,16 +59,13 @@ def detect_people_yolo(image_bytes):
     if frame is None:
         raise ValueError("Could not decode the image")
 
-    # Static variable to hold previous detection state
-    if not hasattr(detect_people_yolo, "last_count"):
-        detect_people_yolo.last_count = 0  # Initialize with no people initially detected
-
     height, width, _ = frame.shape
     blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), swapRB=True, crop=False)
     net.setInput(blob)
     outs = net.forward(output_layers)
 
-    current_count = 0  # Count current frame detections
+    # Initialize a set to track detected person IDs
+    detected_person_ids = set()
 
     # Process detections from each of the output layers
     for out in outs:
@@ -42,12 +73,18 @@ def detect_people_yolo(image_bytes):
             scores = detection[5:]
             class_id = np.argmax(scores)
             confidence = scores[class_id]
-            if confidence > 0.5:
-                # Check if the detected class is 'person' (class_id == 0 for 'person' in COCO dataset)
-                if class_id == 0:
-                    current_count += 1
+            if confidence > 0.5 and class_id == 0:  # Check if the detected class is 'person' (class_id == 0 for 'person' in COCO dataset)
+                detected_person_ids.add(class_id)  # Add the detected person ID to the set
 
-    # Check if there is an increase in the number of people detected
-    is_new_person = current_count > detect_people_yolo.last_count
-    detect_people_yolo.last_count = current_count  # Update the count
-    return is_new_person
+    # Calculate the current count of detected persons
+    current_count = len(detected_person_ids)
+
+    # Update previous count in Redis
+    redis_client.set("previous_count", current_count)
+
+    # Check if a new person has been detected
+    print(f"Previous count: {previous_count}, Current count: {current_count}")
+    if current_count > previous_count:
+        return True  # New person detected
+    else:
+        return False  # No new person detected

@@ -1,13 +1,18 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
-from core.face_detection import detect_people_yolo
-from utils.file import convert_to_base64
-from core.ai import respond, respond_voice
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+import os
+from core.ai import respond_voice
 
+load_dotenv(dotenv_path="ops/.env")
 
+from core.models import VoiceResponseModel
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
@@ -19,37 +24,20 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-
-@app.post("/respond/")
-async def detect(file: UploadFile = File(...)):
-    contents = await file.read()
-    person_detected = detect_people_yolo(contents)
-
-    if person_detected:
-        encoded_img = convert_to_base64(contents)
-        return JSONResponse(content={"response": respond(encoded_img)})
-    else:
-        return JSONResponse(content={})
-
     
 @app.post("/respond_voice/")
-async def detect(file: UploadFile = File(...)):
+async def detect(file: UploadFile = File(...)) -> VoiceResponseModel:
     contents = await file.read()
-    person_detected = detect_people_yolo(contents)
-
-    if person_detected:
-        encoded_img = convert_to_base64(contents)
-        response = respond_voice(encoded_img)
-
-        return JSONResponse(content=response)
-    else:
-        return JSONResponse(content={})
+    response = respond_voice(contents)
+    return response
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the index.html file."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    STATIC_FILE_URL = os.getenv("STATIC_FILE_URL", "http://127.0.0.1:8000/static") 
+    API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/respond_voice/")
+    return templates.TemplateResponse("index.html", {"request": request,"static_file_url": STATIC_FILE_URL, "api_url": API_URL})
 
 if __name__ == "__main__":
     import uvicorn

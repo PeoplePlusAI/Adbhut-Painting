@@ -1,6 +1,10 @@
 opencv-python
 python-dotenv
+python-multipart
+pydub
+requests
 fastapi
+jinja2
 uvicorn
 openai
 numpy
