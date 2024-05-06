@@ -2,7 +2,8 @@ from dotenv import load_dotenv
 from utils.file import convert_to_base64
 from core.face_detection import detect_people_yolo
 from core.voice import text_to_speech, dubverse_tts
-from utils.openai_utils import get_openai_response
+from llms.gpt4vision import get_openai_response
+from llms.llava import get_llava_response
 import base64
 import random
 import requests
@@ -20,29 +21,12 @@ previous_response = ""
 with open("prompts/main.txt", "r") as f:
     prompt = f.read()
 
-# with open("prompts/COSTAR.txt", "r") as f:
-#     prompt = f.read().replace('\n', ' ')
-
-def compose_body(encoded_img, prompt=prompt, model="llava"):
-    return {
-        "model": model,
-        "prompt": prompt,
-        "images": [encoded_img],
-        "stream": False
-    }
-
 def get_ai_response(encoded_img):
     global previous_response
-    body = compose_body(encoded_img)
-    body["prompt"] = body["prompt"].format(previous_response)
-    response = get_openai_response(OPENAI_API_KEY, prompt, body)
+    prompt = prompt.format(previous_response)
+    response = get_openai_response(OPENAI_API_KEY, prompt, encoded_img)
     if not response:
-      response = requests.post(LLAVA_URL, json=body)
-      print(response.json())
-      if response.status_code != 200:
-        print(f"Something went wrong. Status code is {response.status_code}")
-        return ""
-      response = response.json().get("response", "").replace("</s>", "").strip()
+      response = get_llava_response(encoded_img, prompt)
     else:
       print(response)
     previous_response = response
