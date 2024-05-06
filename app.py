@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from utils.redis_utils import set_previous_count
 import os
 from core.ai import respond_voice
 
@@ -24,6 +25,10 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+
+@app.on_event("startup")
+def startup():
+    set_previous_count()
     
 @app.post("/respond_voice/")
 async def detect(file: UploadFile = File(...)) -> VoiceResponseModel:

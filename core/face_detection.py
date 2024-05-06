@@ -3,8 +3,7 @@ import cv2
 import time
 import redis
 import numpy as np
-
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+from utils.redis_utils import get_previous_count, set_previous_count
 
 if os.path.exists("coco_model/yolov3.weights"):
     weights_path = "coco_model/yolov3.weights"
@@ -39,15 +38,11 @@ if output_layers_indices.ndim > 1:  # Checking if the output is a nested list
 else:
     output_layers = [layer_names[i - 1] for i in output_layers_indices.flatten()]
 
-# Initialize time of last detection and debounce period
-last_detection_time = 0
-debounce_period = 100  # Adjust the debounce period as needed (in seconds)
 
 def detect_people_yolo(image_bytes):
-    global redis_client
 
     # Retrieve previous count from Redis
-    previous_count = int(redis_client.get("previous_count") or 0)
+    previous_count = get_previous_count()
 
     # Convert bytes to a numpy array
     nparr = np.frombuffer(image_bytes, np.uint8)
@@ -59,32 +54,52 @@ def detect_people_yolo(image_bytes):
     if frame is None:
         raise ValueError("Could not decode the image")
 
+    # Initialize a list to store detected person bounding boxes
+    person_boxes = []
+
+    # Initialize a list to store confidence values
+    confidences = []
+
+    # Calculate the current count of detected persons
     height, width, _ = frame.shape
     blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), swapRB=True, crop=False)
     net.setInput(blob)
     outs = net.forward(output_layers)
 
-    # Initialize a set to track detected person IDs
-    detected_person_ids = set()
-
-    # Process detections from each of the output layers
     for out in outs:
         for detection in out:
             scores = detection[5:]
             class_id = np.argmax(scores)
             confidence = scores[class_id]
-            if confidence > 0.5 and class_id == 0:  # Check if the detected class is 'person' (class_id == 0 for 'person' in COCO dataset)
-                detected_person_ids.add(class_id)  # Add the detected person ID to the set
+            if confidence > 0.5 and class_id == 0:  # Check if the detected class is 'person'
+                # Scale the bounding box coordinates to the size of the image
+                center_x = int(detection[0] * width)
+                center_y = int(detection[1] * height)
+                w = int(detection[2] * width)
+                h = int(detection[3] * height)
+                # Calculate the top-left corner of the bounding box
+                x = int(center_x - w / 2)
+                y = int(center_y - h / 2)
+                # Append the bounding box coordinates to the list
+                person_boxes.append([x, y, w, h])
+                # Append the confidence value to the list
+                confidences.append(confidence)
 
-    # Calculate the current count of detected persons
-    current_count = len(detected_person_ids)
+    # Apply non-maximum suppression to filter out overlapping bounding boxes
+    indices = cv2.dnn.NMSBoxes(person_boxes, confidences, 0.5, 0.4)
+
+    # Count the number of detected persons after non-maximum suppression
+    detected_person_count = len(indices)
 
     # Update previous count in Redis
-    redis_client.set("previous_count", current_count)
+    set_previous_count(detected_person_count)
 
-    # Check if a new person has been detected
-    print(f"Previous count: {previous_count}, Current count: {current_count}")
-    if current_count > previous_count:
-        return True  # New person detected
-    else:
-        return False  # No new person detected
+    print(f"previous count {previous_count} and current_count {detected_person_count}")
+
+    # Check if enough time has passed since the last detection or new person detected
+    if detected_person_count > previous_count:
+        # Update the time of last detection if new person detected
+        return True
+
+    return False
+

@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from utils.file import convert_to_base64
 from core.face_detection import detect_people_yolo
 from core.voice import text_to_speech, dubverse_tts
+from utils.openai_utils import get_openai_response
 import base64
 import random
 import requests
@@ -12,8 +13,7 @@ load_dotenv(dotenv_path="ops/.env")
 
 LLAVA_URL = os.getenv("LLAVA_URL")
 
-# with open("prompts/main.txt", "r") as f:
-#     prompt = f.read()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 with open("prompts/alt.txt", "r") as f:
     prompt = f.read().replace('\n', ' ')
@@ -27,25 +27,27 @@ def compose_body(encoded_img, prompt=prompt, model="llava"):
     }
 
 
-def llava_chat(encoded_img):
+def get_ai_response(encoded_img):
     body = compose_body(encoded_img)
-    start = time.time()
-    response = requests.post(LLAVA_URL, json=body)
-    end = time.time()
-    print(end - start)
-    if response.status_code != 200:
+    response = get_openai_response(OPENAI_API_KEY, prompt, body)
+    if not response:
+      response = requests.post(LLAVA_URL, json=body)
+      print(response.json())
+      if response.status_code != 200:
         print(f"Something went wrong. Status code is {response.status_code}")
         return ""
-    print(response.json())
-    response = response.json().get("response", "").replace("</s>", "").strip()
+      response = response.json().get("response", "").replace("</s>", "").strip()
+    else:
+      print(response)
     return response
+
 
 
 def respond_voice(contents, person_detected=False):
     person_detected = detect_people_yolo(contents)
     if person_detected:
         encoded_img = convert_to_base64(contents)
-        response_text = llava_chat(encoded_img)
+        response_text = get_ai_response(encoded_img)
     else:
         response_text = ""
     if response_text:
