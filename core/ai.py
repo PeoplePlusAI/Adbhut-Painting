@@ -24,10 +24,11 @@ with open("prompts/main.txt", "r") as f:
 def get_ai_response(encoded_img, prompt=prompt):
     global previous_response
     prompt = prompt.format(previous_response)
-    response = get_openai_response(OPENAI_API_KEY, prompt, encoded_img)
-    if not response:
-      response = get_llava_response(encoded_img, prompt)
+    response = get_openai_response(OPENAI_API_KEY, prompt, encoded_img).get("content")
+    if response:
+      print(response.get("content"))
     else:
+      response = get_llava_response(encoded_img, prompt)
       print(response)
     previous_response = response
     return response
