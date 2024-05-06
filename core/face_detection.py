@@ -3,8 +3,7 @@ import cv2
 import time
 import redis
 import numpy as np
-
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+from utils.redis_utils import get_previous_count, set_previous_count
 
 if os.path.exists("coco_model/yolov3.weights"):
     weights_path = "coco_model/yolov3.weights"
@@ -44,10 +43,9 @@ last_detection_time = 0
 debounce_period = 100  # Adjust the debounce period as needed (in seconds)
 
 def detect_people_yolo(image_bytes):
-    global redis_client
 
     # Retrieve previous count from Redis
-    previous_count = int(redis_client.get("previous_count") or 0)
+    previous_count = get_previous_count()
 
     # Convert bytes to a numpy array
     nparr = np.frombuffer(image_bytes, np.uint8)
@@ -80,7 +78,7 @@ def detect_people_yolo(image_bytes):
     current_count = len(detected_person_ids)
 
     # Update previous count in Redis
-    redis_client.set("previous_count", current_count)
+    set_previous_count(current_count)
 
     # Check if a new person has been detected
     print(f"Previous count: {previous_count}, Current count: {current_count}")
