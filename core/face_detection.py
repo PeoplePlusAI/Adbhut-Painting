@@ -16,7 +16,7 @@ else:
     # Absolute paths to the YOLOv3 weights, config, and coco.names file
     weights_path = os.path.join(MODEL_DIR, 'yolov3.weights')
     config_path = os.path.join(MODEL_DIR, 'yolov3.cfg')
-    names_path = os.path.join(MODEL_DIR, 'coco.names')https://github.com/PeoplePlusAI/Talking-Painting/edit/main/core/face_detection.py
+    names_path = os.path.join(MODEL_DIR, 'coco.names')
 
 # Load YOLOv3 model
 net = cv2.dnn.readNet(weights_path, config_path)
