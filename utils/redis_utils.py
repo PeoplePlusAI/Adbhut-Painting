@@ -7,4 +7,4 @@ def set_previous_count(count=0):
 
 
 def get_previous_count():
-  return redis_client.get("previous_count")
+  return int(redis_client.get("previous_count"))
