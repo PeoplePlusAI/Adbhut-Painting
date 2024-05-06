@@ -26,7 +26,7 @@ def get_ai_response(encoded_img, prompt=prompt):
     prompt = prompt.format(previous_response)
     response = get_openai_response(OPENAI_API_KEY, prompt, encoded_img).get("content")
     if response:
-      print(response.get("content"))
+      print(response)
     else:
       response = get_llava_response(encoded_img, prompt)
       print(response)
