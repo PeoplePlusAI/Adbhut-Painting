@@ -33,4 +33,5 @@ def get_openai_response(api_key, prompt, base64_image):
     if "error" in response:
        print(response.get("error"))
        return ""
-    return response
+    message = response.get("choices", [])[0].get("message")
+    return message
