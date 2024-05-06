@@ -38,13 +38,8 @@ if output_layers_indices.ndim > 1:  # Checking if the output is a nested list
 else:
     output_layers = [layer_names[i - 1] for i in output_layers_indices.flatten()]
 
-# Initialize time of last detection and debounce period
-last_detection_time = 0
-cooldown_period = 100# Adjust the debounce period as needed (in seconds)
 
 def detect_people_yolo(image_bytes):
-
-    global last_detection_time
 
     # Retrieve previous count from Redis
     previous_count = get_previous_count()
@@ -99,16 +94,11 @@ def detect_people_yolo(image_bytes):
     # Update previous count in Redis
     set_previous_count(detected_person_count)
 
-    # Get the current time
-    current_time = time.time()
-
     print(f"previous count {previous_count} and current_count {detected_person_count}")
 
     # Check if enough time has passed since the last detection or new person detected
-    if detected_person_count > previous_count or current_time - last_detection_time > cooldown_period:
+    if detected_person_count > previous_count:
         # Update the time of last detection if new person detected
-        if detected_person_count > previous_count:
-            last_detection_time = current_time
         return True
 
     return False
