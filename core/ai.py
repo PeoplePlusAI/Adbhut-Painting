@@ -15,6 +15,8 @@ LLAVA_URL = os.getenv("LLAVA_URL")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+previous_response = ""
+
 with open("prompts/main.txt", "r") as f:
     prompt = f.read()
 
@@ -29,9 +31,10 @@ def compose_body(encoded_img, prompt=prompt, model="llava"):
         "stream": False
     }
 
-
 def get_ai_response(encoded_img):
+    global previous_response
     body = compose_body(encoded_img)
+    body["prompt"] = body["prompt"].format(previous_response)
     response = get_openai_response(OPENAI_API_KEY, prompt, body)
     if not response:
       response = requests.post(LLAVA_URL, json=body)
@@ -42,9 +45,8 @@ def get_ai_response(encoded_img):
       response = response.json().get("response", "").replace("</s>", "").strip()
     else:
       print(response)
+    previous_response = response
     return response
-
-
 
 def respond_voice(contents, person_detected=False):
     person_detected = detect_people_yolo(contents)
