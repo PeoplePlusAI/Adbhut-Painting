@@ -21,7 +21,7 @@ previous_response = ""
 with open("prompts/main.txt", "r") as f:
     prompt = f.read()
 
-def get_ai_response(encoded_img):
+def get_ai_response(encoded_img, prompt=prompt):
     global previous_response
     prompt = prompt.format(previous_response)
     response = get_openai_response(OPENAI_API_KEY, prompt, encoded_img)
