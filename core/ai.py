@@ -12,11 +12,11 @@ load_dotenv(dotenv_path="ops/.env")
 
 LLAVA_URL = os.getenv("LLAVA_URL")
 
-with open("prompts/main.txt", "r") as f:
-    prompt = f.read()
+# with open("prompts/main.txt", "r") as f:
+#     prompt = f.read()
 
-# with open("prompts/COSTAR.txt", "r") as f:
-#     prompt = f.read().replace('\n', ' ')
+with open("prompts/alt.txt", "r") as f:
+    prompt = f.read().replace('\n', ' ')
 
 def compose_body(encoded_img, prompt=prompt, model="llava"):
     return {
