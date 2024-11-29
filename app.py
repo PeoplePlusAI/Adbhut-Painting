@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from utils.redis_utils import set_previous_count
 import os
-from core.ai import respond_voice
+from core.ai import respond_voice, respond_farewell
 
 load_dotenv(dotenv_path="ops/.env")
 
@@ -33,7 +33,7 @@ def startup():
 @app.post("/respond_voice/")
 async def detect(file: UploadFile = File(...)) -> VoiceResponseModel:
     contents = await file.read()
-    response = respond_voice(contents)
+    response = respond_farewell(contents)
     return response
 
 
