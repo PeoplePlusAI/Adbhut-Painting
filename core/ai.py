@@ -75,15 +75,17 @@ def respond_farewell(contents, person_detected=False):
     if is_tanuj(contents):
         prompt = farewell_prompt.format(name="Tanuj")
         response_text = get_openai_response(prompt)
+        audio_response = text_to_speech(response_text)
+        encoded_audio = base64.b64encode(audio_response.content).decode("utf-8")
+        return {"response": response_text, "audio": encoded_audio, "expression": "talking"}
     elif is_gopi(contents):
         prompt = farewell_prompt.format(name="Gopi")
-        print(prompt)
         response_text = get_openai_response(prompt)
-        print(response_text)
+        audio_response = text_to_speech(response_text)
+        encoded_audio = base64.b64encode(audio_response.content).decode("utf-8")
+        return {"response": response_text, "audio": encoded_audio, "expression": "talking"}
     else:
-        response_text = "Who are you ? I don't know you. Goodbye."
-    audio_response = text_to_speech(response_text)
-    encoded_audio = base64.b64encode(audio_response.content).decode("utf-8")
-    return {"response": response_text, "audio": encoded_audio, "expression": "talking"}
+        response = respond_voice(contents)
+        return response
 
 
